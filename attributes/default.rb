@@ -67,13 +67,13 @@ default['redisio']['version'] = if node['redisio']['package_install']
 default['redisio']['install_dir'] = nil
 
 # Job control related options (initd, upstart, or systemd)
-if node['platform_family'] == 'rhel' && Gem::Version.new(node['platform_version']) > Gem::Version.new('7.0.0')
-  default['redisio']['job_control'] = 'systemd'
-elsif node['platform_family'] == 'freebsd'
-  default['redisio']['job_control'] = 'rcinit'
-else
-  default['redisio']['job_control'] = 'initd'
-end
+default['redisio']['job_control'] = if node['init_package'] == 'systemd'
+                                      'systemd'
+                                    elsif node['platform_family'] == 'freebsd'
+                                      'rcinit'
+                                    else
+                                      'initd'
+                                    end
 
 # Init.d script related options
 default['redisio']['init.d']['required_start'] = []
@@ -117,6 +117,8 @@ default['redisio']['default_settings'] = {
   'replpingslaveperiod'     => '10',
   'repltimeout'             => '60',
   'repldisabletcpnodelay'   => 'no',
+  'replbacklogsize'         => '1mb',
+  'replbacklogttl'          => 3600,
   'slavepriority'           => '100',
   'requirepass'             => nil,
   'rename_commands'         => nil,
@@ -129,6 +131,7 @@ default['redisio']['default_settings'] = {
   'noappendfsynconrewrite'  => 'no',
   'aofrewritepercentage'    => '100',
   'aofrewriteminsize'       => '64mb',
+  'aofloadtruncated'        => 'yes',
   'luatimelimit'            => '5000',
   'slowloglogslowerthan'    => '10000',
   'slowlogmaxlen'           => '1024',
@@ -155,7 +158,9 @@ default['redisio']['default_settings'] = {
   'includes'                 => nil,
   'data_bag_name'            => nil,
   'data_bag_item'            => nil,
-  'data_bag_key'             => nil
+  'data_bag_key'             => nil,
+  'minslavestowrite'         => nil,
+  'minslavesmaxlag'          => nil
 }
 
 # The default for this is set inside of the "install" recipe. This is due to the way deep merge handles arrays

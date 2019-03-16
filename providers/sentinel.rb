@@ -42,7 +42,7 @@ def configure
       # Create the owner of the redis data directory
       user current['user'] do
         comment 'Redis service account'
-        supports manage_home: true
+        manage_home true
         home current['homedir']
         shell current['shell']
         system current['systemuser']
@@ -105,10 +105,10 @@ def configure
             master_ip:                    current['master_ip'] || current[:masterip],
             master_port:                  current['master_port'] || current[:masterport],
             quorum_count:                 current['quorum_count'] || current[:quorum_count],
-            :'auth-pass' =>               current['auth-pass'] || current[:authpass],
-            :'down-after-milliseconds' => current['down-after-milliseconds'] || current[:downaftermil],
-            :'parallel-syncs' =>          current['parallel-syncs'] || current[:parallelsyncs],
-            :'failover-timeout' =>        current['failover-timeout'] || current[:failovertimeout]
+            auth_pass:                    current['auth-pass'] || current[:authpass],
+            down_after_milliseconds:      current['down-after-milliseconds'] || current[:downaftermil],
+            parallel_syncs:               current['parallel-syncs'] || current[:parallelsyncs],
+            failover_timeout:             current['failover-timeout'] || current[:failovertimeout]
           }
         ]
       else
@@ -119,7 +119,7 @@ def configure
       if current['data_bag_name'] && current['data_bag_item'] && current['data_bag_key']
         bag = Chef::EncryptedDataBagItem.load(current['data_bag_name'], current['data_bag_item'])
         masters.each do |master|
-          master['auth-pass'] = bag[current['data_bag_key']]
+          master['auth_pass'] = bag[current['data_bag_key']]
         end
       end
 
@@ -151,6 +151,7 @@ def configure
           name:              current['name'],
           piddir:            piddir,
           job_control:       node['redisio']['job_control'],
+          sentinel_bind:     current['sentinel_bind'],
           sentinel_port:     current['sentinel_port'],
           loglevel:          current['loglevel'],
           logfile:           current['logfile'],
@@ -209,25 +210,22 @@ def configure
         )
         only_if { node['redisio']['job_control'] == 'upstart' }
       end
-      #TODO: fix for freebsd
-       template "/usr/local/etc/rc.d/redis_#{sentinel_name}" do
-          source 'sentinel.rcinit.erb'
-          cookbook 'redisio'
-          owner current['user']
-          group current['group']
-          mode '0755'
-          variables({
-            :name => sentinel_name,
-            :bin_path => bin_path,
-            :job_control => node['redisio']['job_control'],
-            :user => current['user'],
-            :group => current['group'],
-            :configdir => current['configdir'],
-            :piddir => piddir,
-            :platform => node['platform'],
-            })
-          only_if { node['redisio']['job_control'] == 'rcinit' }
-        end
+      # TODO: fix for freebsd
+      template "/usr/local/etc/rc.d/redis_#{sentinel_name}" do
+        source 'sentinel.rcinit.erb'
+        cookbook 'redisio'
+        owner current['user']
+        group current['group']
+        mode '0755'
+        variables(
+          name: sentinel_name,
+          bin_path: bin_path,
+          user: current['user'],
+          configdir: current['configdir'],
+          piddir: piddir
+        )
+        only_if { node['redisio']['job_control'] == 'rcinit' }
+      end
     end
   end # servers each loop
 end
